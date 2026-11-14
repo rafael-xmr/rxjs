@@ -73,7 +73,14 @@ export class ConnectableObservable<T> extends Observable<T> {
       let destination: SubjectLike<T>;
       try {
         destination = getSubject(state);
-        destination.subscribe(subscriber, { signal: subscriber.signal });
+        destination.subscribe(
+          {
+            next: (value) => subscriber.next(value),
+            error: (error) => subscriber.error(error),
+            complete: () => subscriber.complete(),
+          },
+          { signal: subscriber.signal }
+        );
       } catch (error) {
         subscriber.error(error);
       }

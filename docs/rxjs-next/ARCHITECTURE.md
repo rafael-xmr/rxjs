@@ -190,6 +190,8 @@ JavaScript does not expose the required DOM abort-algorithm hook; controllers
 without registered Observable algorithms delegate directly to the captured
 platform method.
 
+Observer dictionaries sample their callback members at subscription and invoke them without a receiver, as required by Web IDL. RxJS forwarding code wraps subscriber methods in callbacks before crossing the platform subscribe boundary; it does not patch the native Observable prototype. The lifecycle contract checks callback receiver and sampling in native and fallback modes.
+
 ### Shared native/fallback lifecycle contract
 
 P0.4 adds one self-contained contract under

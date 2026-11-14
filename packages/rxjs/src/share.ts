@@ -101,7 +101,14 @@ Observable.prototype[share] = function <T>(this: Observable<T>, config: ShareCon
     let destination: SubjectLike<T>;
     try {
       destination = subject ??= connector();
-      destination.subscribe(subscriber, { signal: subscriber.signal });
+      destination.subscribe(
+        {
+          next: (value) => subscriber.next(value),
+          error: (error) => subscriber.error(error),
+          complete: () => subscriber.complete(),
+        },
+        { signal: subscriber.signal }
+      );
     } catch (error) {
       subscriber.error(error);
       return;

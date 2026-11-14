@@ -1,44 +1,51 @@
 class SafeObserver<T> implements Observer<T> {
-  readonly #destination: Partial<Observer<T>> | null | undefined;
+  readonly #next: ((value: T) => void) | undefined;
+  readonly #error: ((error: any) => void) | undefined;
+  readonly #complete: (() => void) | undefined;
 
-  constructor(maybeObserver: Partial<Observer<T>> | ((value: T) => void) | null | undefined) {
-    this.#destination = typeof maybeObserver === 'function' ? { next: maybeObserver } : maybeObserver;
+  constructor(observer: Partial<Observer<T>> | ((value: T) => void) | null | undefined) {
+    if (typeof observer === 'function') {
+      this.#next = observer;
+    } else if (observer != null) {
+      // Web IDL converts dictionary members in alphabetical order at subscription time.
+      this.#complete = observer.complete;
+      this.#error = observer.error;
+      this.#next = observer.next;
+      for (const callback of [this.#complete, this.#error, this.#next]) {
+        if (callback !== undefined && typeof callback !== 'function') throw new TypeError('Observer callbacks must be callable');
+      }
+    }
   }
 
   next(value: T): void {
-    if (!canInvokeRealmCallbacks()) {
-      return;
-    }
+    if (!canInvokeRealmCallbacks()) return;
     try {
-      this.#destination?.next?.(value);
+      const callback = this.#next;
+      callback?.(value);
     } catch (error) {
       reportError(error);
     }
   }
 
   error(error: any, hasSourceLocation = true): void {
-    if (!canInvokeRealmCallbacks()) {
-      return;
-    }
-
-    if (!this.#destination?.error) {
+    if (!canInvokeRealmCallbacks()) return;
+    const callback = this.#error;
+    if (!callback) {
       reportError(error, hasSourceLocation);
       return;
     }
-
     try {
-      this.#destination.error(error);
+      callback(error);
     } catch (handlerError) {
       reportError(handlerError);
     }
   }
 
   complete(): void {
-    if (!canInvokeRealmCallbacks()) {
-      return;
-    }
+    if (!canInvokeRealmCallbacks()) return;
     try {
-      this.#destination?.complete?.();
+      const callback = this.#complete;
+      callback?.();
     } catch (error) {
       reportError(error);
     }
@@ -637,7 +644,10 @@ class ObservableImpl<T> implements Subscribable<T> {
       );
 
       if (subscriber.active) {
-        this.subscribe(subscriber, { signal: subscriber.signal });
+        this.subscribe(
+          { next: (value) => subscriber.next(value), error: (error) => subscriber.error(error), complete: () => subscriber.complete() },
+          { signal: subscriber.signal }
+        );
       }
     });
   }
@@ -941,7 +951,10 @@ class ObservableImpl<T> implements Subscribable<T> {
               return;
             }
 
-            result.subscribe(subscriber, { signal: subscriber.signal });
+            result.subscribe(
+              { next: (value) => subscriber.next(value), error: (error) => subscriber.error(error), complete: () => subscriber.complete() },
+              { signal: subscriber.signal }
+            );
           },
           complete: () => subscriber.complete(),
         },
@@ -954,7 +967,10 @@ class ObservableImpl<T> implements Subscribable<T> {
     const ObservableCtor = instanceCtor<T>(this);
     return new ObservableCtor((subscriber) => {
       subscriber.addTeardown(callback);
-      this.subscribe(subscriber, { signal: subscriber.signal });
+      this.subscribe(
+        { next: (value) => subscriber.next(value), error: (error) => subscriber.error(error), complete: () => subscriber.complete() },
+        { signal: subscriber.signal }
+      );
     });
   }
 

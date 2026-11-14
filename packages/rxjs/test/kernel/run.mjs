@@ -56,6 +56,7 @@ function createNativeContractScript(bundle) {
 const done = arguments[arguments.length - 1];
 const platformMap = globalThis.Observable.prototype.map;
 ${bundle}
+globalThis.__rxjsNativeSubscriberForwarding();
 const runContract = (${runExtensionKernelContract.toString()});
 const expectedCases = ${JSON.stringify(extensionKernelCaseNames)};
 

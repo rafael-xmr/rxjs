@@ -84,7 +84,14 @@ export class Subject<T> extends ObservableBase<T> implements SubjectLike<T> {
    */
   asObservable(): Observable<T> {
     return new ObservableBase<T>((subscriber) => {
-      this.subscribe(subscriber, { signal: subscriber.signal });
+      this.subscribe(
+        {
+          next: (value) => subscriber.next(value),
+          error: (error) => subscriber.error(error),
+          complete: () => subscriber.complete(),
+        },
+        { signal: subscriber.signal }
+      );
     });
   }
 }

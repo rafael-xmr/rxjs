@@ -45,7 +45,14 @@ Observable.prototype[connect] = function <T, Selected extends ObservableValue<un
 
     const shared = source[create]<T>((sharedSubscriber) => {
       try {
-        destination.subscribe(sharedSubscriber, { signal: sharedSubscriber.signal });
+        destination.subscribe(
+          {
+            next: (value) => sharedSubscriber.next(value),
+            error: (error) => sharedSubscriber.error(error),
+            complete: () => sharedSubscriber.complete(),
+          },
+          { signal: sharedSubscriber.signal }
+        );
       } catch (error) {
         sharedSubscriber.error(error);
       }

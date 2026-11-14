@@ -16,13 +16,10 @@ export class AsyncSubject<T> extends ObservableBase<T> implements SubjectLike<T>
   }
 
   constructor() {
-    super(() => {});
+    super(() => { });
   }
 
-  override subscribe(
-    observer?: Partial<Observer<T>> | ((value: T) => void) | null,
-    options?: SubscribeOptions
-  ): void {
+  override subscribe(observer?: Partial<Observer<T>> | ((value: T) => void) | null, options?: SubscribeOptions): void {
     new ObservableBase<T>((subscriber) => this.#addSubscriber(subscriber)).subscribe(observer, options);
   }
 
@@ -86,7 +83,14 @@ export class AsyncSubject<T> extends ObservableBase<T> implements SubjectLike<T>
 
   asObservable(): Observable<T> {
     return new ObservableBase<T>((subscriber) => {
-      this.subscribe(subscriber, { signal: subscriber.signal });
+      this.subscribe(
+        {
+          next: (value) => subscriber.next(value),
+          error: (error) => subscriber.error(error),
+          complete: () => subscriber.complete(),
+        },
+        { signal: subscriber.signal }
+      );
     });
   }
 }

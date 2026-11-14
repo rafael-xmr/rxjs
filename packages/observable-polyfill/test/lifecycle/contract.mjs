@@ -1,4 +1,5 @@
 export const observableLifecycleCaseNames = Object.freeze([
+  'observer callbacks use undefined receiver',
   'shared producer, abort, teardown, and restart',
   'completion lifecycle',
   'error lifecycle',
@@ -40,6 +41,34 @@ export async function runObservableLifecycleContract({ ObservableCtor, captureRe
 
   assert(typeof ObservableCtor === 'function', 'The selected Observable constructor is not callable');
   assert(typeof captureReportedErrors === 'function', 'The reported-error capture adapter is missing');
+
+  await runCase('observer callbacks use undefined receiver', () => {
+    let sink;
+    const seen = [];
+    const source = new ObservableCtor((subscriber) => {
+      sink = subscriber;
+    });
+    const observer = {
+      next: function (value) {
+        'use strict';
+        seen.push([this, value]);
+      },
+      complete: function () {
+        'use strict';
+        seen.push([this, 'complete']);
+      },
+    };
+    source.subscribe(observer);
+    observer.next = () => {
+      throw new Error('observer callback changed after subscription');
+    };
+    sink.next(1);
+    sink.complete();
+    equal(seen.length, 2, 'callback count');
+    equal(seen[0][0], undefined, 'next receiver');
+    equal(seen[0][1], 1, 'next value');
+    equal(seen[1][0], undefined, 'complete receiver');
+  });
 
   await runCase('shared producer, abort, teardown, and restart', () => {
     const events = [];

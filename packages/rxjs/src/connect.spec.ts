@@ -292,7 +292,10 @@ describe('connect', () => {
           subscriber.addTeardown(() => {
             selectorTeardowns++;
           });
-          shared.subscribe(subscriber, { signal: subscriber.signal });
+          shared.subscribe(
+            { next: (value) => subscriber.next(value), error: (error) => subscriber.error(error), complete: () => subscriber.complete() },
+            { signal: subscriber.signal }
+          );
         }),
       { connector }
     );

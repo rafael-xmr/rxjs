@@ -140,7 +140,14 @@ function groupByOperator<T, K, E = T>(
           activeGroupViews--;
           stopIfUnobserved();
         });
-        subject.subscribe(groupSubscriber, { signal: groupSubscriber.signal });
+        subject.subscribe(
+          {
+            next: (value) => groupSubscriber.next(value),
+            error: (error) => groupSubscriber.error(error),
+            complete: () => groupSubscriber.complete(),
+          },
+          { signal: groupSubscriber.signal }
+        );
       });
 
       Object.defineProperty(view, 'key', {
